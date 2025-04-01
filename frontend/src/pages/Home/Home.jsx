@@ -1,23 +1,22 @@
 import logo from './logo.svg';
 import './Home.css';
 
+import MovieTable from '../../components/MovieTable/MovieTable'
+import AddMovieForm from '../../components/AddMovieForm/AddMovieFom'
+import { useState } from 'react';
+
+
 function Home() {
+  const [MovieList, SetMovieList] = useState([
+    { title: "Macbeth" },
+    { title: "Les oiseaux" },
+    { title: "2001: L'odyssey de l'espace" },
+  ])
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <AddMovieForm MovieList={MovieList} SetMovieList={SetMovieList} />
+      <MovieTable MovieList={MovieList} />
     </div>
   );
 }

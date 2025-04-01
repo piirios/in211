@@ -1,0 +1,10 @@
+.movie-table {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+
+}
+
+.movie-table>div {
+    margin: 0 20px;
+}
