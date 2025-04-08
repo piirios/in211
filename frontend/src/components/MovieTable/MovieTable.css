@@ -1,10 +1,13 @@
 .movie-table {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 1rem 0;
 }
 
-.movie-table>div {
-    margin: 0 20px;
+@media (max-width: 768px) {
+    .movie-table {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
 }

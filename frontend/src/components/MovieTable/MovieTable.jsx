@@ -6,7 +6,7 @@ function MovieTable(props) {
     console.log(props.MovieList)
     return <div className="movie-table">
         {props.MovieList.map((movie) => (
-            <Movie movieName={movie.title} key={movie.title} />
+            <Movie movie={movie} key={movie.title} />
         ))}
     </div>
 }
