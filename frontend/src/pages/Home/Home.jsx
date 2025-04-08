@@ -3,9 +3,12 @@ import MovieTable from '../../components/MovieTable/MovieTable'
 import AddMovieForm from '../../components/AddMovieForm/AddMovieFom'
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useMovieContext } from '../../context/MovieContext';
 
 function Home() {
-  const [MovieList, SetMovieList] = useState([]);
+  const { myMovieList, setMyMovieList, addMovie, removeMovie } = useMovieContext();
+  const [TrendingMovieList, SetTrendingMovieList] = useState([]);
+  //const [MyMovieList, SetMyMovieList] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,7 +42,7 @@ function Home() {
         }
       });
 
-      SetMovieList(response.data.results);
+      SetTrendingMovieList(response.data.results);
     } catch (error) {
       console.error('Erreur lors de la récupération des films:', error);
     } finally {
@@ -72,11 +75,17 @@ function Home() {
       <div className="content-section">
         <div className="add-movie-section">
           <h2>Ajouter un film</h2>
-          <AddMovieForm MovieList={MovieList} SetMovieList={SetMovieList} />
+          <AddMovieForm MovieList={myMovieList || []} SetMovieList={setMyMovieList} isAuthenticated={isAuthenticated} />
         </div>
+        {/* Mes films pref */}
+        <div className="movies-section">
+          <h2>Mes Films</h2>
+          <MovieTable MovieList={myMovieList || []} />
+        </div>
+        {/* Les films du moment */}
         <div className="movies-section">
           <h2>Films Populaires</h2>
-          <MovieTable MovieList={MovieList} />
+          <MovieTable MovieList={TrendingMovieList || []} />
         </div>
       </div>
     </div>
