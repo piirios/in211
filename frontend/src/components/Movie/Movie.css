@@ -1,34 +1,115 @@
-.movie {
+.movie-card {
     position: relative;
-    transition: transform 0.3s;
-    cursor: pointer;
-    z-index: 1;
-}
-
-.movie:hover {
-    transform: scale(1.05);
-}
-
-.thumbnail {
-    position: relative;
-    border-radius: 8px;
     overflow: hidden;
-    aspect-ratio: 2/3;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
 }
 
-.thumbnail img {
+.movie-card:hover {
+    transform: scale(1.03);
+}
+
+.movie-image-container {
+    position: relative;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    overflow: hidden;
 }
 
-.title {
-    margin-top: 0.8rem;
-    font-size: 1rem;
-    font-weight: 500;
+.movie-poster {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.movie-title {
+    padding: 10px;
+    margin: 0;
+    font-size: 16px;
     text-align: center;
 }
 
-.movie:hover .title {
-    color: #e50914;
+/* Overlay qui apparaît au hover */
+.movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.movie-image-container:hover .movie-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Buttons styles */
+.movie-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 80%;
+    z-index: 2;
+}
+
+/* Styles communs pour tous les boutons */
+.movie-btn {
+    padding: 10px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+/* Styles spécifiques pour chaque type de bouton */
+.btn-details {
+    background-color: rgba(52, 152, 219, 0.9);
+    color: white;
+}
+
+.btn-details:hover {
+    background-color: rgb(52, 152, 219);
+    transform: translateY(-2px);
+}
+
+.btn-add {
+    background-color: rgba(46, 204, 113, 0.9);
+    color: white;
+}
+
+.btn-add:hover:not(:disabled) {
+    background-color: rgb(46, 204, 113);
+    transform: translateY(-2px);
+}
+
+.btn-remove {
+    background-color: rgba(231, 76, 60, 0.9);
+    color: white;
+}
+
+.btn-remove:hover {
+    background-color: rgb(231, 76, 60);
+    transform: translateY(-2px);
+}
+
+.movie-btn:disabled {
+    background-color: rgba(149, 165, 166, 0.9);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: not-allowed;
+    transform: none;
 }

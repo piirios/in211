@@ -3,7 +3,6 @@ import axios from 'axios';
 import './AddMovieForm.css';
 
 function AddMovieForm({ MovieList, SetMovieList }) {
-    // Nombre de résultats à afficher dans le dropdown (facilement modifiable)
     const MAX_SEARCH_RESULTS = 5;
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -12,7 +11,6 @@ function AddMovieForm({ MovieList, SetMovieList }) {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Fonction pour rechercher des films
     const searchMovies = async (query) => {
         if (!query || query.length < 2) {
             setSearchResults([]);
@@ -43,7 +41,6 @@ function AddMovieForm({ MovieList, SetMovieList }) {
         }
     };
 
-    // Debounce pour la recherche
     useEffect(() => {
         const timer = setTimeout(() => {
             searchMovies(searchTerm);
@@ -52,7 +49,6 @@ function AddMovieForm({ MovieList, SetMovieList }) {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    // Ajouter un film à la liste
     const addMovie = (movie) => {
         if (!MovieList.some(m => m.id === movie.id)) {
             SetMovieList([...MovieList, movie]);
@@ -61,7 +57,6 @@ function AddMovieForm({ MovieList, SetMovieList }) {
         setShowDropdown(false);
     };
 
-    // Gérer le clic en dehors du dropdown pour le fermer
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

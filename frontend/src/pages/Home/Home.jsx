@@ -8,7 +8,6 @@ import { useMovieContext } from '../../context/MovieContext';
 function Home() {
   const { myMovieList, setMyMovieList, addMovie, removeMovie } = useMovieContext();
   const [TrendingMovieList, SetTrendingMovieList] = useState([]);
-  //const [MyMovieList, SetMyMovieList] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
