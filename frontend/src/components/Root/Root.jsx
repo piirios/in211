@@ -1,11 +1,13 @@
 import './Root.css';
 import Header from '../Header/Header';
 
-export const Root = ({ children }) => {
+export function Root({ children }) {
   return (
-    <div className="Root-container">
+    <div className="root-container">
       <Header />
-      <div className="Root-content">{children}</div>
+      <div className="content-container">
+        {children}
+      </div>
     </div>
   );
-};
+}
