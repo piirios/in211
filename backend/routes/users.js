@@ -24,7 +24,7 @@ router.post('/new', function (req, res) {
   userRepository
     .insert(newUser)
     .then(function (newDocument) {
-      res.status(201).json(newDocument);
+      res.status(201).json(newDocument.identifiers[0]);
     })
     .catch(function (error) {
       console.error(error);
@@ -43,9 +43,10 @@ router.delete('/:userId', function (req, res) {
     .getRepository(User)
     .delete({ id: req.params.userId })
     .then(function () {
-      res.status(204).json({ message: 'User successfully deleted' });
+      res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
     })
-    .catch(function () {
+    .catch(function (error) {
+      console.error(error);
       res.status(500).json({ message: 'Error while deleting the user' });
     });
 });

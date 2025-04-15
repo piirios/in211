@@ -3,13 +3,15 @@ import logger from 'morgan';
 import cors from 'cors';
 import usersRouter from './routes/users.js';
 import moviesRouter from './routes/movies.js';
+import listsRouter from './routes/lists.js';
+import commentRouter from './routes/comment.js';
 import { routeNotFoundJsonHandler } from './services/routeNotFoundJsonHandler.js';
 import { jsonErrorHandler } from './services/jsonErrorHandler.js';
 import { appDataSource } from './datasource.js';
 
 const apiRouter = express.Router();
 
-/* appDataSource
+appDataSource
   .initialize()
   .then(() => {
     console.log('Data Source has been initialized!');
@@ -25,6 +27,9 @@ const apiRouter = express.Router();
       res.send('Hello from Express!');
     });
     apiRouter.use('/users', usersRouter);
+    apiRouter.use('/movies', moviesRouter);
+    apiRouter.use('/lists', listsRouter);
+    apiRouter.use('/comments', commentRouter);
 
     // Register API router
     app.use('/api', apiRouter);
@@ -41,9 +46,9 @@ const apiRouter = express.Router();
   })
   .catch((err) => {
     console.error('Error during Data Source initialization:', err);
-  }); */
+  });
 
-console.log('Data Source has been initialized!');
+/* console.log('Data Source has been initialized!');
 const app = express();
 
 app.use(logger('dev'));
@@ -62,4 +67,4 @@ apiRouter.use('/movies', moviesRouter);
 const port = parseInt(process.env.PORT || '8080');
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
-});
+}); */
