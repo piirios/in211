@@ -1,10 +1,11 @@
-import Movie from "../Movie/Movie"
+import React from 'react';
+import Movie from '../Movie/Movie';
 import './MovieTable.css';
 
-function MovieTable(props) {
+function MovieTable({ MovieList, listId = null }) {
     return <div className="movie-table">
-        {props.MovieList.map((movie) => (
-            <Movie movie={movie} key={movie.title} />
+        {Array.isArray(MovieList) && MovieList.map((movie, index) => (
+            <Movie key={`${movie.id}-${index}`} movie={movie} listId={listId} />
         ))}
     </div>
 }

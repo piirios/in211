@@ -29,7 +29,7 @@ appDataSource
     apiRouter.use('/users', usersRouter);
     apiRouter.use('/movies', moviesRouter);
     apiRouter.use('/lists', listsRouter);
-    apiRouter.use('/comments', commentRouter);
+    apiRouter.use('/comment', commentRouter);
 
     // Register API router
     app.use('/api', apiRouter);
@@ -38,7 +38,7 @@ appDataSource
     app.use(routeNotFoundJsonHandler); // this middleware must be registered after all routes to handle 404 correctly
     app.use(jsonErrorHandler); // this error handler must be registered after all middleware to catch all errors
 
-    const port = parseInt(process.env.PORT || '8080');
+    const port = parseInt(process.env.PORT || '3001');
 
     app.listen(port, () => {
       console.log(`Server listening at http://localhost:${port}`);
@@ -64,7 +64,7 @@ apiRouter.get('/', (req, res) => {
 app.use('/api', apiRouter);
 apiRouter.use('/movies', moviesRouter);
 
-const port = parseInt(process.env.PORT || '8080');
+const port = parseInt(process.env.PORT || '3001');
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
 }); */

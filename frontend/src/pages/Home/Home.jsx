@@ -4,9 +4,10 @@ import AddMovieForm from '../../components/AddMovieForm/AddMovieFom'
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useMovieContext } from '../../context/MovieContext';
+import { Link } from 'react-router-dom';
 
 function Home() {
-  const { myMovieList, setMyMovieList, addMovie, removeMovie } = useMovieContext();
+  const { myMovieList, setMyMovieList, addMovie, removeMovie, userLists } = useMovieContext();
   const [TrendingMovieList, SetTrendingMovieList] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +64,9 @@ function Home() {
     return <div className="loading">Chargement...</div>;
   }
 
+  // Limiter le nombre de films affichés dans chaque catégorie pour l'aperçu
+  const MAX_PREVIEW_MOVIES = 6;
+
   return (
     <div className="home-page">
       <div className="hero-section">
@@ -76,11 +80,41 @@ function Home() {
           <h2>Ajouter un film</h2>
           <AddMovieForm MovieList={myMovieList || []} SetMovieList={setMyMovieList} isAuthenticated={isAuthenticated} />
         </div>
-        {/* Mes films pref */}
-        <div className="movies-section">
-          <h2>Mes Films</h2>
-          <MovieTable MovieList={myMovieList || []} />
-        </div>
+
+        {/* Sections pour chaque liste d'utilisateur */}
+        {userLists && userLists.length > 0 && (
+          <div className="user-lists-section">
+            <h2>Mes Listes</h2>
+
+            {userLists.map(list => (
+              <div key={list.id} className="list-movies-section">
+                <div className="list-header">
+                  <h3>{list.name}</h3>
+                  {list.movies && list.movies.length > MAX_PREVIEW_MOVIES && (
+                    <Link to={`/list/${list.id}`} className="see-all-link">
+                      Voir tous ({list.movies.length})
+                    </Link>
+                  )}
+                </div>
+
+                {list.movies && list.movies.length > 0 ? (
+                  <MovieTable
+                    MovieList={list.movies.slice(0, MAX_PREVIEW_MOVIES)}
+                    listId={list.id}
+                  />
+                ) : (
+                  <div className="empty-list-message">
+                    Cette liste ne contient aucun film.
+                    <Link to="/lists" className="manage-lists-link">
+                      Gérer mes listes
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Les films du moment */}
         <div className="movies-section">
           <h2>Films Populaires</h2>

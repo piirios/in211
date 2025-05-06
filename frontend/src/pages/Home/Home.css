@@ -169,3 +169,69 @@ button:hover {
     padding: 1.5rem;
   }
 }
+
+.user-lists-section {
+  margin-bottom: 3rem;
+}
+
+.list-movies-section {
+  margin-bottom: 2.5rem;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.list-header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.see-all-link {
+  color: #3498db;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.see-all-link:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+.empty-list-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  text-align: center;
+  color: #aaa;
+  font-size: 1rem;
+  gap: 1rem;
+}
+
+.manage-lists-link {
+  color: #3498db;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid #3498db;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.manage-lists-link:hover {
+  background-color: #3498db;
+  color: white;
+}
