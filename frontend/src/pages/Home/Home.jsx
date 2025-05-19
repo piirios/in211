@@ -1,7 +1,7 @@
 import './Home.css';
 import MovieTable from '../../components/MovieTable/MovieTable'
 import AddMovieForm from '../../components/AddMovieForm/AddMovieFom'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useMovieContext } from '../../context/MovieContext';
 import { Link } from 'react-router-dom';
@@ -22,6 +22,8 @@ function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [newListName, setNewListName] = useState('');
+  const inputRef = useRef();
 
   const authenticate = async () => {
     try {
@@ -64,24 +66,33 @@ function Home() {
     }
   };
 
-  // Vérifier s'il faut créer une liste par défaut
+  // Enrichissement TMDB systématique des films de chaque liste utilisateur
   useEffect(() => {
-    const createDefaultList = async () => {
-      if (userId && userLists && userLists.length === 0) {
-        try {
-          console.log("Création d'une liste par défaut pour l'utilisateur:", userId);
-          await createList("Ma liste de films");
-          await refreshLists();
-        } catch (err) {
-          console.error("Erreur lors de la création de la liste par défaut:", err);
-        }
+    const enrichMovies = async () => {
+      if (!userLists || userLists.length === 0) return;
+      for (const list of userLists) {
+        if (!list.movies || list.movies.length === 0) continue;
+        const enrichedMovies = await Promise.all(list.movies.map(async (movie) => {
+          if (movie.poster_path && movie.title) return movie;
+          try {
+            const response = await axios.get(`https://api.themoviedb.org/3/movie/${movie.id}`, {
+              params: { language: 'fr-FR' },
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`,
+                'accept': 'application/json'
+              }
+            });
+            return { ...movie, ...response.data };
+          } catch (err) {
+            return movie;
+          }
+        }));
+        // Met à jour la liste localement
+        list.movies = enrichedMovies;
       }
     };
-
-    if (!listsLoading && userId) {
-      createDefaultList();
-    }
-  }, [userId, userLists, listsLoading, createList, refreshLists]);
+    enrichMovies();
+  }, [userLists]);
 
   useEffect(() => {
     authenticate();
@@ -138,10 +149,9 @@ function Home() {
         </div>
 
         {/* Sections pour chaque liste d'utilisateur */}
-        {userLists && userLists.length > 0 && (
+        {userLists && userLists.length > 0 ? (
           <div className="user-lists-section">
             <h2>Mes Listes</h2>
-
             {userLists.map(list => (
               <div key={list.id} className="list-movies-section">
                 <div className="list-header">
@@ -152,7 +162,6 @@ function Home() {
                     </Link>
                   )}
                 </div>
-
                 {list.movies && list.movies.length > 0 ? (
                   <MovieTable
                     MovieList={list.movies.slice(0, MAX_PREVIEW_MOVIES)}
@@ -168,6 +177,25 @@ function Home() {
                 )}
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="user-lists-section">
+            <h2>Mes Listes</h2>
+            <div className="empty-list-message">
+              Vous n'avez pas encore créé de liste.<br />
+              <button
+                className="retry-button"
+                onClick={async () => {
+                  const name = prompt('Nom de la nouvelle liste :');
+                  if (name && name.trim()) {
+                    await createList(name.trim());
+                    await refreshLists();
+                  }
+                }}
+              >
+                Créer une liste
+              </button>
+            </div>
           </div>
         )}
 

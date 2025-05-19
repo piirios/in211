@@ -47,6 +47,7 @@ function Lists() {
 
         try {
             await deleteList(listId);
+            await refreshLists();
         } catch (err) {
             setError("Erreur lors de la suppression de la liste");
         }

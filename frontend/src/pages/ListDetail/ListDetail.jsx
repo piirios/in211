@@ -14,13 +14,14 @@ function ListDetail() {
     const [movies, setMovies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isEnriching, setIsEnriching] = useState(false);
 
     // Récupérer les détails de la liste et les films
     useEffect(() => {
-        const fetchListDetails = async () => {
+        const fetchAndEnrichListDetails = async () => {
             if (!listId) return;
-
             setLoading(true);
+            setIsEnriching(true);
             try {
                 // Configurer axios pour le backend
                 const apiClient = axios.create({
@@ -33,69 +34,60 @@ function ListDetail() {
                 // Récupérer les films de la liste
                 const response = await apiClient.get(`/movies/list/${listId}`);
 
+                let listData = null;
+                let moviesData = [];
                 if (response.data && response.data.list) {
-                    setList(response.data.list);
-                    setMovies(response.data.movies || []);
-                    setError(null);
+                    listData = response.data.list;
+                    moviesData = response.data.movies || [];
                 } else {
-                    throw new Error("Format de réponse incorrect");
+                    // Fallback contexte
+                    const listFromContext = userLists.find(l => l.id === parseInt(listId));
+                    if (listFromContext) {
+                        listData = listFromContext;
+                        moviesData = listFromContext.movies || [];
+                    } else {
+                        throw new Error("Impossible de charger les détails de la liste");
+                    }
                 }
-            } catch (err) {
-                console.error("Erreur lors du chargement de la liste:", err);
 
-                // Si l'API échoue, essayer de récupérer les données du contexte
-                const listFromContext = userLists.find(l => l.id === parseInt(listId));
-                if (listFromContext) {
-                    setList(listFromContext);
-                    setMovies(listFromContext.movies || []);
-                    setError(null);
-                } else {
-                    setError("Impossible de charger les détails de la liste");
-                }
+                // Enrichir tous les films qui n'ont pas d'affiche
+                const enriched = await Promise.all(
+                    moviesData.map(async (movie) => {
+                        if (movie.poster_path) return movie;
+                        try {
+                            const response = await fetch(
+                                `https://api.themoviedb.org/3/movie/${movie.id}?language=fr-FR`,
+                                {
+                                    headers: {
+                                        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`,
+                                        'accept': 'application/json'
+                                    }
+                                }
+                            );
+                            if (!response.ok) throw new Error('Erreur TMDB');
+                            const data = await response.json();
+                            if (data.poster_path) {
+                                return { ...movie, ...data };
+                            } else {
+                                return { ...movie, ...data, poster_path: null };
+                            }
+                        } catch (err) {
+                            return { ...movie, poster_path: null };
+                        }
+                    })
+                );
+                setList(listData);
+                setMovies(enriched);
+                setError(null);
+            } catch (err) {
+                setError("Impossible de charger les détails de la liste");
             } finally {
                 setLoading(false);
+                setIsEnriching(false);
             }
         };
-
-        fetchListDetails();
+        fetchAndEnrichListDetails();
     }, [listId, userLists]);
-
-    // Après avoir récupéré les films, enrichir avec TMDB si besoin
-    useEffect(() => {
-        // Si les films existent et n'ont pas de titre, on enrichit
-        if (movies.length > 0 && !movies[0].title) {
-            const fetchDetails = async () => {
-                try {
-                    const enriched = await Promise.all(
-                        movies.map(async (movie) => {
-                            // Si déjà enrichi, on ne refait pas l'appel
-                            if (movie.title && movie.poster_path) return movie;
-                            try {
-                                const response = await fetch(
-                                    `https://api.themoviedb.org/3/movie/${movie.id}?language=fr-FR`,
-                                    {
-                                        headers: {
-                                            'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`,
-                                            'accept': 'application/json'
-                                        }
-                                    }
-                                );
-                                if (!response.ok) throw new Error('Erreur TMDB');
-                                const data = await response.json();
-                                return { ...movie, ...data };
-                            } catch (err) {
-                                return movie; // fallback : on garde l'id
-                            }
-                        })
-                    );
-                    setMovies(enriched);
-                } catch (err) {
-                    // ignore
-                }
-            };
-            fetchDetails();
-        }
-    }, [movies]);
 
     // Gérer le retrait d'un film de la liste
     const handleRemoveMovie = async (movieId) => {
@@ -164,7 +156,15 @@ function ListDetail() {
                     </button>
                 </div>
             ) : (
-                <MovieTable MovieList={movies} listId={list.id} />
+                <>
+                    <MovieTable MovieList={movies} listId={list.id} />
+                    {isEnriching && (
+                        <div className="enriching-movies">
+                            <div className="loading-spinner"></div>
+                            <span>Chargement des affiches...</span>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

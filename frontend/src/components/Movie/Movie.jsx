@@ -11,6 +11,8 @@ function Movie({ movie, listId = null }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const dropdownRef = useRef(null);
+    const [isPosterLoading, setIsPosterLoading] = useState(true);
+    const [posterError, setPosterError] = useState(false);
 
     // Vérifier si le film est dans la liste courante ou dans myMovieList s'il n'y a pas de listId
     const isInList = listId
@@ -149,11 +151,25 @@ function Movie({ movie, listId = null }) {
     return <div className="movie-card">
         <div className="movie-image-container">
             {movie.poster_path ? (
-                <img
-                    src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                    alt={movie.title}
-                    className="movie-poster"
-                />
+                <>
+                    {isPosterLoading && (
+                        <div className="poster-loading">
+                            <div className="loading-spinner"></div>
+                        </div>
+                    )}
+                    <img
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                        alt={movie.title}
+                        className="movie-poster"
+                        onLoad={() => setIsPosterLoading(false)}
+                        onError={() => {
+                            setIsPosterLoading(false);
+                            setPosterError(true);
+                        }}
+                        style={{ display: isPosterLoading ? 'none' : 'block' }}
+                    />
+                    {posterError && <div className="no-poster">Erreur de chargement</div>}
+                </>
             ) : (
                 <div className="no-poster">Pas d'affiche</div>
             )}

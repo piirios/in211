@@ -720,3 +720,14 @@
         margin-bottom: 0.7rem;
     }
 }
+
+.anonymous-badge {
+    background: #444;
+    color: #eee;
+    font-size: 0.95em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-left: 2px;
+    font-style: italic;
+    opacity: 0.85;
+}

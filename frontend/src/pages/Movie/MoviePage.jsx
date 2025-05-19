@@ -137,6 +137,20 @@ function MoviePage() {
         }
     };
 
+    // Fonction utilitaire pour recharger les commentaires
+    const reloadComments = async () => {
+        setCommentsLoading(true);
+        try {
+            const response = await apiClient.get(`/comment/movie/${id}`);
+            setComments(response.data.comments || []);
+            setCommentError(null);
+        } catch (err) {
+            setCommentError("Impossible de charger les commentaires");
+        } finally {
+            setCommentsLoading(false);
+        }
+    };
+
     const handleSubmitComment = async (e) => {
         e.preventDefault();
 
@@ -148,36 +162,30 @@ function MoviePage() {
         try {
             if (userComment) {
                 // Mise à jour d'un commentaire existant
-                const response = await apiClient.put(`/comment/${userComment.id}`, {
+                await apiClient.put(`/comment/${userComment.id}`, {
                     content: newComment,
                     score: rating
                 });
-
-                // Mettre à jour l'état local avec les données mises à jour
-                const updatedComment = response.data;
-                setComments(comments.map(comment =>
-                    comment.id === userComment.id ? updatedComment : comment
-                ));
-                setUserComment(updatedComment);
-
             } else {
                 // Création d'un nouveau commentaire
-                const response = await apiClient.post('/comment', {
+                await apiClient.post('/comment', {
                     content: newComment,
                     score: rating,
                     userId: userId,
                     movieId: parseInt(id)
                 });
-
-                // Mettre à jour l'état local avec le nouveau commentaire
-                const newUserComment = response.data;
-                setComments([newUserComment, ...comments]);
-                setUserComment(newUserComment);
             }
-
+            // Recharge la liste complète pour avoir le nom/prénom
+            await reloadComments();
+            // Met à jour le commentaire utilisateur local
+            if (userId) {
+                const userExistingComment = comments.find(
+                    comment => comment.user && comment.user.id === userId
+                );
+                setUserComment(userExistingComment || null);
+            }
             setCommentError(null);
         } catch (err) {
-            console.error("Erreur lors de l'enregistrement du commentaire:", err);
             setCommentError("Impossible d'enregistrer le commentaire");
         }
     };
@@ -357,7 +365,10 @@ function MoviePage() {
                                 <div key={comment.id} className="comment-card">
                                     <div className="comment-header">
                                         <span className="comment-author">
-                                            {comment.user ? `${comment.user.firstname} ${comment.user.lastname}` : 'Utilisateur anonyme'}
+                                            {(comment.user && comment.user.firstname && comment.user.lastname)
+                                                ? `${comment.user.firstname} ${comment.user.lastname}`
+                                                : <span className="anonymous-badge">(anonyme)</span>
+                                            }
                                         </span>
                                         <span className="comment-score">
                                             Note: {comment.score}/10
