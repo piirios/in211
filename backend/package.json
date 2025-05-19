@@ -10,7 +10,8 @@
     "migration:generate": "dotenv -- typeorm --dataSource='./datasource.js' migration:generate --outputJs --pretty migrations/$npm_config_name",
     "postmigration:generate": "./postmigration.sh",
     "migration:run": "dotenv -- typeorm --dataSource='./datasource.js' migration:run",
-    "migration:revert": "dotenv -- typeorm --dataSource='./datasource.js' migration:revert"
+    "migration:revert": "dotenv -- typeorm --dataSource='./datasource.js' migration:revert",
+    "vercel-build": "typeorm --dataSource='./datasource.js' migration:run"
   },
   "dependencies": {
     "cors": "^2.8.5",

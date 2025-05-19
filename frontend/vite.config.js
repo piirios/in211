@@ -8,12 +8,15 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001', // Port du serveur backend (modifié de 8080 à 3001)
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',
         changeOrigin: true,
         // Supprimer /api du chemin lors de la redirection vers le backend
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   },
-  build: { outDir: 'build' },
+  build: {
+    outDir: 'build',
+    sourcemap: true
+  },
 });
