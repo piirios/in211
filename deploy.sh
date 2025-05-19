@@ -8,10 +8,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🚀 Début du processus de déploiement...${NC}"
 
 # 1. Configuration de l'environnement de production
-echo -e "${BLUE}⚙️ Configuration de l'environnement de production...${NC}"
 cd frontend
-echo "VITE_BACKEND_URL=https://ensta-in211.vercel.app" > .env.production
-echo -e "${GREEN}✅ Configuration terminée${NC}"
 
 # 2. Build du frontend
 echo -e "${BLUE}📦 Construction du frontend...${NC}"
@@ -36,27 +33,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 echo -e "${GREEN}✅ Fichiers copiés avec succès${NC}"
-
-# 5. Commit des changements
-echo -e "${BLUE}💾 Commit des changements...${NC}"
 cd ..
-git add .
-git commit -m "chore: mise à jour des fichiers de build et configuration production"
-if [ $? -ne 0 ]; then
-    echo "❌ Erreur lors du commit"
-    exit 1
-fi
-echo -e "${GREEN}✅ Changements commités${NC}"
-
-# 6. Push des changements
-echo -e "${BLUE}📤 Push des changements...${NC}"
-git push
-if [ $? -ne 0 ]; then
-    echo "❌ Erreur lors du push"
-    exit 1
-fi
-echo -e "${GREEN}✅ Changements poussés${NC}"
-
 # 7. Déploiement sur Vercel
 echo -e "${BLUE}🚀 Déploiement sur Vercel...${NC}"
 vercel deploy --prod
