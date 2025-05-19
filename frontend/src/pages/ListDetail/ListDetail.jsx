@@ -164,7 +164,7 @@ function ListDetail() {
                     </button>
                 </div>
             ) : (
-                <MovieTable MovieList={movies} listId={parseInt(listId)} />
+                <MovieTable MovieList={movies} listId={list.id} />
             )}
         </div>
     );

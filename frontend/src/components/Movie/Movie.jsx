@@ -191,7 +191,6 @@ function Movie({ movie, listId = null }) {
                                                 onClick={(e) => handleAddToSpecificList(e, list.id)}
                                             >
                                                 <div className="list-option-name">{list.name}</div>
-                                                <div className="list-option-content">{getMoviesInListText(list)}</div>
                                             </button>
                                         ))
                                     ) : (

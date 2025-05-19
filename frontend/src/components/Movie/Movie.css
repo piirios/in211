@@ -1,6 +1,6 @@
 .movie-card {
     position: relative;
-    overflow: hidden;
+    /* overflow: visible !important; */
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
@@ -13,7 +13,7 @@
 .movie-image-container {
     position: relative;
     width: 100%;
-    overflow: hidden;
+    /* overflow: visible !important; */
 }
 
 .movie-poster {
@@ -124,18 +124,22 @@
 
 /* Styles pour le menu déroulant des listes */
 .lists-dropdown {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    width: 100%;
+    position: fixed;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, 0);
+    /* Centré horizontalement, sous le bouton */
+    min-width: 220px;
+    max-width: 320px;
     background-color: #222;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 2px 8px #0004;
+    z-index: 100000;
     max-height: 250px;
     overflow-y: auto;
     margin-top: 5px;
     border: 1px solid #333;
+    pointer-events: auto;
 }
 
 .dropdown-title {

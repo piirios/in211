@@ -1,5 +1,7 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
+import WelcomeUserModal from '../components/WelcomeUserModal/WelcomeUserModal';
+import { v4 as uuidv4 } from 'uuid';
 
 // Création du contexte
 const MovieContext = createContext();
@@ -14,6 +16,9 @@ export const MovieProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [userId, setUserId] = useState(null);
+    const [showWelcome, setShowWelcome] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
+    const [userUuid, setUserUuid] = useState(null);
 
     // Configuration d'axios pour le backend
     const apiClient = axios.create({
@@ -25,54 +30,56 @@ export const MovieProvider = ({ children }) => {
 
     // Au démarrage, vérifier si l'utilisateur existe ou en créer un nouveau
     useEffect(() => {
-        checkOrCreateUser();
+        // On cherche l'uuid dans le localStorage ou on le crée
+        let uuid = localStorage.getItem('user_uuid');
+        if (!uuid) {
+            uuid = uuidv4();
+            localStorage.setItem('user_uuid', uuid);
+        }
+        setUserUuid(uuid);
+
+        // Vérifier si l'utilisateur existe déjà côté backend
+        const checkUserExists = async () => {
+            try {
+                const res = await apiClient.get(`/users/exists/${uuid}`);
+                if (res.data.exists) {
+                    // L'utilisateur existe, on récupère ses infos
+                    setShowWelcome(false);
+                    // On peut aller chercher les listes, etc.
+                    setUserId(uuid);
+                    await fetchUserLists(uuid);
+                } else {
+                    // L'utilisateur n'existe pas, on affiche la popup
+                    setShowWelcome(true);
+                }
+            } catch (err) {
+                setError("Erreur lors de la vérification de l'utilisateur");
+                setShowWelcome(true);
+            }
+        };
+        checkUserExists();
     }, []);
 
-    // Créer un utilisateur de test pour l'application
-    const checkOrCreateUser = async () => {
+    // Nouvelle fonction pour enregistrer l'utilisateur avec uuid
+    const registerUser = async (firstname, lastname, email) => {
+        if (!userUuid || !firstname || !lastname || !email) return;
         try {
             setLoading(true);
-
-            // Créer un utilisateur de test
-            const createUserResponse = await apiClient.post('/users/new', {
-                email: "utilisateur_test@exemple.com",
-                firstname: "Utilisateur",
-                lastname: "Test"
+            await apiClient.post('/users/register', {
+                uuid: userUuid,
+                firstname,
+                lastname,
+                email
             });
-
-            // Récupérer l'ID utilisateur
-            const newUserId = createUserResponse.data.id;
-            setUserId(newUserId);
-            console.log("Utilisateur créé avec l'ID:", newUserId);
-
-            // Charger les listes de l'utilisateur
-            await fetchUserLists(newUserId);
-
+            setUserId(userUuid);
+            localStorage.setItem('user_firstname', firstname);
+            localStorage.setItem('user_lastname', lastname);
+            localStorage.setItem('user_email', email);
+            setShowWelcome(false);
+            await fetchUserLists(userUuid);
             setError(null);
         } catch (err) {
-            console.error("Erreur lors de la création de l'utilisateur:", err);
-            if (err.response && err.response.status === 400 && err.response.data.message.includes("already exists")) {
-                // L'utilisateur existe déjà, on récupère tous les utilisateurs pour trouver celui avec l'email correspondant
-                try {
-                    const usersResponse = await apiClient.get('/users');
-                    const existingUser = usersResponse.data.users.find(user =>
-                        user.email === "utilisateur_test@exemple.com"
-                    );
-
-                    if (existingUser) {
-                        setUserId(existingUser.id);
-                        console.log("Utilisateur existant trouvé avec l'ID:", existingUser.id);
-                        await fetchUserLists(existingUser.id);
-                    } else {
-                        setError("Impossible de trouver l'utilisateur existant");
-                    }
-                } catch (fetchErr) {
-                    console.error("Erreur lors de la récupération des utilisateurs:", fetchErr);
-                    setError("Erreur lors de la récupération des utilisateurs");
-                }
-            } else {
-                setError("Impossible de créer ou trouver l'utilisateur");
-            }
+            setError("Impossible d'enregistrer l'utilisateur");
         } finally {
             setLoading(false);
         }
@@ -218,6 +225,10 @@ export const MovieProvider = ({ children }) => {
         }
     };
 
+    const handleWelcomeSubmit = ({ firstname, lastname, email }) => {
+        registerUser(firstname, lastname, email);
+    };
+
     return (
         <MovieContext.Provider value={{
             myMovieList,
@@ -232,8 +243,10 @@ export const MovieProvider = ({ children }) => {
             loading,
             error,
             refreshLists: () => fetchUserLists(),
-            userId
+            userId,
+            userUuid,
         }}>
+            {showWelcome && <WelcomeUserModal onSubmit={handleWelcomeSubmit} />}
             {children}
         </MovieContext.Provider>
     );

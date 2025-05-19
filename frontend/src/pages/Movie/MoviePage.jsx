@@ -216,52 +216,50 @@ function MoviePage() {
 
     const isInList = movie ? Array.isArray(myMovieList) && myMovieList.some(m => m && m.id === movie.id) : false;
 
-    return (
-        <div className="movie-details-container">
-            <button className="back-to-home" onClick={handleBackToHome}>
-                <span className="back-arrow">&#8592;</span> Retour
-            </button>
+    // Choix de l'image de fond
+    const bgImage = movie?.backdrop_path || movie?.poster_path
+        ? `https://image.tmdb.org/t/p/original${movie.backdrop_path || movie.poster_path}`
+        : null;
 
-            {movie && (
-                <div className="movie-details-content">
-                    <div className="movie-poster-section">
+    return (
+        <div className="movie-hero" style={bgImage ? { backgroundImage: `url(${bgImage})` } : {}}>
+            <div className="movie-hero-overlay">
+                <button className="back-to-home" onClick={handleBackToHome}>
+                    <span className="back-arrow">&#8592;</span> Retour
+                </button>
+                <div className="movie-main-content">
+                    <div className="movie-main-left">
                         {movie?.poster_path ? (
                             <img
                                 src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
                                 alt={movie.title}
-                                className="movie-details-poster"
+                                className="movie-main-poster"
                             />
                         ) : (
-                            <div className="no-poster">Pas d'affiche disponible</div>
+                            <div className="no-poster movie-main-poster">Pas d'affiche disponible</div>
                         )}
                     </div>
-
-                    <div className="movie-info-section">
-                        <h1 className="movie-title">{movie?.title || "Titre inconnu"}</h1>
-
+                    <div className="movie-main-right">
+                        <h1 className="movie-title-main">{movie?.title || "Titre inconnu"}</h1>
+                        {movie?.tagline && <div className="tagline">{movie.tagline}</div>}
                         <div className="movie-meta">
                             {movie?.release_date && (
-                                <div className="meta-item">
-                                    <span className="meta-label">Année:</span>
-                                    <span className="meta-value">{movie.release_date.substring(0, 4)}</span>
-                                </div>
+                                <span>{movie.release_date.substring(0, 4)}</span>
                             )}
-
-                            {(movie?.runtime && movie.runtime > 0) && (
-                                <div className="meta-item">
-                                    <span className="meta-label">Durée:</span>
-                                    <span className="meta-value">{movie.runtime} min</span>
-                                </div>
+                            {movie?.runtime && (
+                                <span>{movie.runtime} min</span>
                             )}
-
-                            {(movie?.vote_average !== undefined) && (
-                                <div className="meta-item">
-                                    <span className="meta-label">Note:</span>
-                                    <span className="meta-value">{parseFloat(movie.vote_average).toFixed(1)}/10</span>
-                                </div>
+                            {movie?.vote_average !== undefined && (
+                                <span className="rating">★ {parseFloat(movie.vote_average).toFixed(1)}/10</span>
                             )}
                         </div>
-
+                        {movie?.genres && movie.genres.length > 0 && (
+                            <div className="genres">
+                                {movie.genres.map(genre => (
+                                    <span key={genre.id} className="genre-tag">{genre.name}</span>
+                                ))}
+                            </div>
+                        )}
                         <div className="add-to-list-section">
                             <button
                                 className="btn-add-to-list"
@@ -269,7 +267,6 @@ function MoviePage() {
                             >
                                 Ajouter à une liste
                             </button>
-
                             {showListsMenu && (
                                 <div className="lists-dropdown movie-detail-dropdown">
                                     {listsLoading ? (
@@ -301,81 +298,78 @@ function MoviePage() {
                                 </div>
                             )}
                         </div>
-
                         {movie?.overview && (
-                            <div className="movie-description">
-                                <h2>Synopsis</h2>
-                                <p>{movie.overview}</p>
+                            <div className="overview">
+                                {movie.overview}
                             </div>
                         )}
-
-                        <div className="movie-comments-section">
-                            <h2>Commentaires</h2>
-
-                            <form className="comment-form" onSubmit={handleSubmitComment}>
-                                <div className="rating-selector">
-                                    <label>Votre note:</label>
-                                    <select
-                                        value={rating}
-                                        onChange={(e) => setRating(Number(e.target.value))}
-                                    >
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                                            <option key={num} value={num}>{num}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <textarea
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Votre commentaire..."
-                                    rows={4}
-                                    required
-                                ></textarea>
-
-                                {commentError && <div className="comment-error">{commentError}</div>}
-
-                                <div className="comment-actions">
-                                    <button type="submit" className="submit-comment">
-                                        {userComment ? 'Mettre à jour' : 'Commenter'}
-                                    </button>
-                                    {userComment && (
-                                        <button
-                                            type="button"
-                                            className="delete-comment"
-                                            onClick={handleDeleteComment}
-                                        >
-                                            Supprimer
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-
-                            <div className="comments-list">
-                                {commentsLoading ? (
-                                    <div className="comments-loading">Chargement des commentaires...</div>
-                                ) : comments.length === 0 ? (
-                                    <div className="no-comments">Soyez le premier à commenter ce film</div>
-                                ) : (
-                                    comments.map(comment => (
-                                        <div key={comment.id} className="comment-item">
-                                            <div className="comment-header">
-                                                <span className="comment-author">
-                                                    {comment.user ? `${comment.user.firstname} ${comment.user.lastname}` : 'Utilisateur anonyme'}
-                                                </span>
-                                                <span className="comment-score">
-                                                    Note: {comment.score}/10
-                                                </span>
-                                            </div>
-                                            <div className="comment-content">{comment.content}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </div>
-            )}
+                <div className="comments-section">
+                    <h2>Commentaires</h2>
+                    <div className="comment-form-container">
+                        <form className="comment-form" onSubmit={handleSubmitComment}>
+                            <div className="rating-container">
+                                <label>Votre note :</label>
+                                <div className="rating-input">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                        <button
+                                            type="button"
+                                            key={num}
+                                            className={`rating-btn${rating === num ? ' active' : ''}`}
+                                            onClick={() => setRating(num)}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <textarea
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                placeholder="Votre commentaire..."
+                                required
+                            ></textarea>
+                            {commentError && <div className="comment-error">{commentError}</div>}
+                            <div className="comment-actions">
+                                <button type="submit" className="btn-submit">
+                                    {userComment ? 'Mettre à jour' : 'Commenter'}
+                                </button>
+                                {userComment && (
+                                    <button
+                                        type="button"
+                                        className="btn-delete"
+                                        onClick={handleDeleteComment}
+                                    >
+                                        Supprimer
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </div>
+                    <div className="comments-list">
+                        {commentsLoading ? (
+                            <div className="comments-loading">Chargement des commentaires...</div>
+                        ) : comments.length === 0 ? (
+                            <div className="no-comments">Soyez le premier à commenter ce film</div>
+                        ) : (
+                            comments.map(comment => (
+                                <div key={comment.id} className="comment-card">
+                                    <div className="comment-header">
+                                        <span className="comment-author">
+                                            {comment.user ? `${comment.user.firstname} ${comment.user.lastname}` : 'Utilisateur anonyme'}
+                                        </span>
+                                        <span className="comment-score">
+                                            Note: {comment.score}/10
+                                        </span>
+                                    </div>
+                                    <div className="comment-content">{comment.content}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
