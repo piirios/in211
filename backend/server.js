@@ -19,7 +19,16 @@ appDataSource
     const app = express();
 
     app.use(logger('dev'));
-    app.use(cors());
+
+    // Configuration CORS plus détaillée
+    const corsOptions = {
+      origin: ['https://ensta-in211.vercel.app', 'http://localhost:3000'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
+    };
+    app.use(cors(corsOptions));
+
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
 
