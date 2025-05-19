@@ -7,10 +7,21 @@ import { useMovieContext } from '../../context/MovieContext';
 import { Link } from 'react-router-dom';
 
 function Home() {
-  const { myMovieList, setMyMovieList, addMovie, removeMovie, userLists } = useMovieContext();
-  const [TrendingMovieList, SetTrendingMovieList] = useState([]);
+  const {
+    myMovieList,
+    setMyMovieList,
+    userLists,
+    loading: listsLoading,
+    error: listsError,
+    refreshLists,
+    createList,
+    userId
+  } = useMovieContext();
+
+  const [trendingMovieList, setTrendingMovieList] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const authenticate = async () => {
     try {
@@ -24,6 +35,7 @@ function Home() {
     } catch (error) {
       console.error('Erreur d\'authentification:', error);
       setIsAuthenticated(false);
+      setError('Erreur d\'authentification avec TMDB');
     }
   };
 
@@ -42,13 +54,34 @@ function Home() {
         }
       });
 
-      SetTrendingMovieList(response.data.results);
+      setTrendingMovieList(response.data.results);
+      setError(null);
     } catch (error) {
-      console.error('Erreur lors de la récupération des films:', error);
+      console.error('Erreur lors de la récupération des films populaires:', error);
+      setError('Impossible de charger les films populaires');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Vérifier s'il faut créer une liste par défaut
+  useEffect(() => {
+    const createDefaultList = async () => {
+      if (userId && userLists && userLists.length === 0) {
+        try {
+          console.log("Création d'une liste par défaut pour l'utilisateur:", userId);
+          await createList("Ma liste de films");
+          await refreshLists();
+        } catch (err) {
+          console.error("Erreur lors de la création de la liste par défaut:", err);
+        }
+      }
+    };
+
+    if (!listsLoading && userId) {
+      createDefaultList();
+    }
+  }, [userId, userLists, listsLoading, createList, refreshLists]);
 
   useEffect(() => {
     authenticate();
@@ -60,8 +93,31 @@ function Home() {
     }
   }, [isAuthenticated]);
 
-  if (isLoading) {
+  // Afficher un état de chargement si les données sont en cours de chargement
+  if (isLoading || listsLoading) {
     return <div className="loading">Chargement...</div>;
+  }
+
+  // Afficher un message d'erreur si une erreur s'est produite
+  if (error || listsError) {
+    return (
+      <div className="error-container">
+        <div className="error-message">
+          {error || listsError}
+        </div>
+        <button
+          className="retry-button"
+          onClick={() => {
+            setError(null);
+            authenticate();
+            refreshLists();
+            fetchPopularMovies();
+          }}
+        >
+          Réessayer
+        </button>
+      </div>
+    );
   }
 
   // Limiter le nombre de films affichés dans chaque catégorie pour l'aperçu
@@ -78,7 +134,7 @@ function Home() {
       <div className="content-section">
         <div className="add-movie-section">
           <h2>Ajouter un film</h2>
-          <AddMovieForm MovieList={myMovieList || []} SetMovieList={setMyMovieList} isAuthenticated={isAuthenticated} />
+          <AddMovieForm isAuthenticated={isAuthenticated} />
         </div>
 
         {/* Sections pour chaque liste d'utilisateur */}
@@ -118,7 +174,7 @@ function Home() {
         {/* Les films du moment */}
         <div className="movies-section">
           <h2>Films Populaires</h2>
-          <MovieTable MovieList={TrendingMovieList || []} />
+          <MovieTable MovieList={trendingMovieList || []} />
         </div>
       </div>
     </div>

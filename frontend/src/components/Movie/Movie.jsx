@@ -6,7 +6,7 @@ import "./Movie.css"
 
 function Movie({ movie, listId = null }) {
     const navigate = useNavigate();
-    const { myMovieList, userLists, addMovie, removeMovie } = useMovieContext();
+    const { myMovieList, userLists, addMovie, removeMovie, createList } = useMovieContext();
     const [showListsMenu, setShowListsMenu] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -36,10 +36,21 @@ function Movie({ movie, listId = null }) {
 
     const handleAddToList = (e) => {
         e.stopPropagation();
+
         if (!isInList) {
             // Si on est dans une liste spécifique, on ajoute directement à cette liste
             if (listId) {
-                addMovie(movie, listId);
+                addMovie(movie, listId)
+                    .then(() => {
+                        // Message de succès
+                        const listName = userLists.find(list => list.id === listId)?.name;
+                        if (listName) {
+                            alert(`Film ajouté à la liste "${listName}"`);
+                        }
+                    })
+                    .catch(err => {
+                        setError(err.message || "Erreur lors de l'ajout du film");
+                    });
                 return;
             }
             // Sinon on affiche le menu des listes
@@ -47,7 +58,17 @@ function Movie({ movie, listId = null }) {
         } else {
             // Si on est dans une liste spécifique, on retire de cette liste
             if (listId) {
-                removeMovie(movie.id, listId);
+                removeMovie(movie.id, listId)
+                    .then(() => {
+                        // Message de succès
+                        const listName = userLists.find(list => list.id === listId)?.name;
+                        if (listName) {
+                            alert(`Film retiré de la liste "${listName}"`);
+                        }
+                    })
+                    .catch(err => {
+                        setError(err.message || "Erreur lors du retrait du film");
+                    });
                 return;
             }
             // Sinon, on retire de myMovieList
@@ -57,30 +78,55 @@ function Movie({ movie, listId = null }) {
 
     const handleAddToSpecificList = async (e, listId) => {
         e.stopPropagation();
-        // Ajouter à une liste spécifique
-        addMovie(movie, listId);
-        const selectedList = userLists.find(list => list.id === listId);
-        if (selectedList) {
-            alert(`Film ajouté à la liste "${selectedList.name}"`);
+        setLoading(true);
+
+        try {
+            // Ajouter à une liste spécifique
+            await addMovie(movie, listId);
+
+            // Message de confirmation
+            const selectedList = userLists.find(list => list.id === listId);
+            if (selectedList) {
+                alert(`Film ajouté à la liste "${selectedList.name}"`);
+            }
+
+            setShowListsMenu(false);
+            setError(null);
+        } catch (err) {
+            setError(err.message || "Erreur lors de l'ajout à la liste");
+            console.error("Erreur lors de l'ajout à la liste:", err);
+        } finally {
+            setLoading(false);
         }
-        setShowListsMenu(false);
     };
 
     const handleCreateNewList = async (e) => {
         e.stopPropagation();
         const listName = prompt('Nom de la nouvelle liste:');
 
-        if (listName && listName.trim()) {
-            // Créer une nouvelle liste et y ajouter le film
-            const newListId = userLists.length > 0 ? Math.max(...userLists.map(list => list.id)) + 1 : 1;
-            const newList = { id: newListId, name: listName.trim(), movies: [movie] };
+        if (!listName || !listName.trim()) return;
 
-            // Mettre à jour userLists via le contexte
-            const updatedLists = [...userLists, newList];
-            userLists.push(newList); // Mettre à jour la référence locale pour l'alerte
+        setLoading(true);
 
-            alert(`Film ajouté à la nouvelle liste "${listName.trim()}"`);
+        try {
+            // Créer une nouvelle liste
+            const newListId = await createList(listName.trim());
+
+            if (newListId) {
+                // Ajouter le film à la nouvelle liste
+                await addMovie(movie, newListId);
+                alert(`Film ajouté à la nouvelle liste "${listName.trim()}"`);
+            } else {
+                throw new Error("Impossible de créer la liste");
+            }
+
             setShowListsMenu(false);
+            setError(null);
+        } catch (err) {
+            setError(err.message || "Erreur lors de la création de la liste");
+            console.error("Erreur lors de la création de la liste:", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -123,8 +169,9 @@ function Movie({ movie, listId = null }) {
                     <button
                         className={`movie-btn ${isInList ? 'btn-remove' : 'btn-add'}`}
                         onClick={handleAddToList}
+                        disabled={loading}
                     >
-                        {isInList ? 'Retirer' : listId ? 'Ajouter' : 'Ajouter à une liste'}
+                        {loading ? 'Chargement...' : isInList ? 'Retirer' : listId ? 'Ajouter' : 'Ajouter à une liste'}
                     </button>
 
                     {showListsMenu && !listId && (

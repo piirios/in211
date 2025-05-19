@@ -10,8 +10,7 @@ function MoviePage() {
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { myMovieList, addMovie, removeMovie } = useMovieContext();
-    const [userLists, setUserLists] = useState([]);
+    const { myMovieList, userLists, userId, addMovie, removeMovie, createList } = useMovieContext();
     const [showListsMenu, setShowListsMenu] = useState(false);
     const [listsLoading, setListsLoading] = useState(false);
 
@@ -23,18 +22,13 @@ function MoviePage() {
     const [rating, setRating] = useState(5);
     const [commentError, setCommentError] = useState(null);
 
-    // Données mock pour le développement
-    const mockLists = [
-        { id: 1, name: "Films à voir" },
-        { id: 2, name: "Films favoris" },
-        { id: 3, name: "Films d'action" }
-    ];
-
-    const mockComments = [
-        { id: 1, content: "Un chef-d'œuvre du cinéma !", score: 9, user: { firstname: "Thomas", lastname: "Dupont" } },
-        { id: 2, content: "Très bon film, scénario captivant.", score: 8, user: { firstname: "Julie", lastname: "Martin" } },
-        { id: 3, content: "Je recommande vivement.", score: 7, user: { firstname: "Pierre", lastname: "Durand" } }
-    ];
+    // Configuration d'axios pour le backend
+    const apiClient = axios.create({
+        baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
 
     // Récupérer les détails du film depuis l'API TMDB
     useEffect(() => {
@@ -51,6 +45,18 @@ function MoviePage() {
                 });
 
                 setMovie(response.data);
+
+                // Sauvegarder les informations du film dans notre base de données
+                try {
+                    await apiClient.post('/movies/save', {
+                        id: response.data.id,
+                        title: response.data.title,
+                        poster_path: response.data.poster_path
+                    });
+                } catch (err) {
+                    console.error("Erreur lors de la sauvegarde du film:", err);
+                }
+
                 setError(null);
             } catch (error) {
                 console.error('Erreur:', error);
@@ -63,27 +69,41 @@ function MoviePage() {
         fetchMovieDetails();
     }, [id]);
 
-    // Simuler le chargement des commentaires
+    // Charger les commentaires depuis le backend
     useEffect(() => {
         if (id) {
             setCommentsLoading(true);
-            setTimeout(() => {
-                setComments(mockComments);
-                setCommentsLoading(false);
-            }, 800);
-        }
-    }, [id]);
 
-    // Simuler le chargement des listes
-    useEffect(() => {
-        if (showListsMenu) {
-            setListsLoading(true);
-            setTimeout(() => {
-                setUserLists(mockLists);
-                setListsLoading(false);
-            }, 500);
+            const fetchComments = async () => {
+                try {
+                    const response = await apiClient.get(`/comment/movie/${id}`);
+                    setComments(response.data.comments || []);
+
+                    // Vérifier si l'utilisateur actuel a déjà un commentaire
+                    if (userId && response.data.comments) {
+                        const userExistingComment = response.data.comments.find(
+                            comment => comment.user && comment.user.id === userId
+                        );
+
+                        if (userExistingComment) {
+                            setUserComment(userExistingComment);
+                            setNewComment(userExistingComment.content);
+                            setRating(userExistingComment.score);
+                        }
+                    }
+
+                    setCommentError(null);
+                } catch (err) {
+                    console.error("Erreur lors du chargement des commentaires:", err);
+                    setCommentError("Impossible de charger les commentaires");
+                } finally {
+                    setCommentsLoading(false);
+                }
+            };
+
+            fetchComments();
         }
-    }, [showListsMenu]);
+    }, [id, userId]);
 
     const handleAddToList = () => {
         if (!movie) return;
@@ -91,20 +111,29 @@ function MoviePage() {
     };
 
     const handleAddToSpecificList = async (listId) => {
-        // Simuler l'ajout à une liste
-        addMovie(movie);
-        setShowListsMenu(false);
+        try {
+            await addMovie(movie, listId);
+            setShowListsMenu(false);
+            alert(`Film ajouté à la liste avec succès`);
+        } catch (err) {
+            console.error("Erreur lors de l'ajout du film à la liste:", err);
+        }
     };
 
     const handleCreateNewList = async () => {
         const listName = prompt('Nom de la nouvelle liste:');
 
         if (listName && listName.trim()) {
-            // Simuler la création d'une liste
-            const newListId = mockLists.length + 1;
-            setUserLists([...userLists, { id: newListId, name: listName.trim() }]);
-            addMovie(movie);
-            setShowListsMenu(false);
+            try {
+                const newListId = await createList(listName.trim());
+                if (newListId) {
+                    await addMovie(movie, newListId);
+                    alert(`Film ajouté à la nouvelle liste "${listName.trim()}"`);
+                }
+                setShowListsMenu(false);
+            } catch (err) {
+                console.error("Erreur lors de la création de la liste:", err);
+            }
         }
     };
 
@@ -116,34 +145,41 @@ function MoviePage() {
             return;
         }
 
-        if (userComment) {
-            // Simuler la mise à jour d'un commentaire existant
-            setComments(comments.map(comment =>
-                comment.id === userComment.id
-                    ? { ...comment, content: newComment, score: rating }
-                    : comment
-            ));
+        try {
+            if (userComment) {
+                // Mise à jour d'un commentaire existant
+                const response = await apiClient.put(`/comment/${userComment.id}`, {
+                    content: newComment,
+                    score: rating
+                });
 
-            setUserComment({
-                ...userComment,
-                content: newComment,
-                score: rating
-            });
-        } else {
-            // Simuler l'ajout d'un nouveau commentaire
-            const newCommentId = comments.length > 0 ? Math.max(...comments.map(c => c.id)) + 1 : 1;
-            const newUserComment = {
-                id: newCommentId,
-                content: newComment,
-                score: rating,
-                user: { firstname: 'Vous', lastname: '' }
-            };
+                // Mettre à jour l'état local avec les données mises à jour
+                const updatedComment = response.data;
+                setComments(comments.map(comment =>
+                    comment.id === userComment.id ? updatedComment : comment
+                ));
+                setUserComment(updatedComment);
 
-            setComments([newUserComment, ...comments]);
-            setUserComment(newUserComment);
+            } else {
+                // Création d'un nouveau commentaire
+                const response = await apiClient.post('/comment', {
+                    content: newComment,
+                    score: rating,
+                    userId: userId,
+                    movieId: parseInt(id)
+                });
+
+                // Mettre à jour l'état local avec le nouveau commentaire
+                const newUserComment = response.data;
+                setComments([newUserComment, ...comments]);
+                setUserComment(newUserComment);
+            }
+
+            setCommentError(null);
+        } catch (err) {
+            console.error("Erreur lors de l'enregistrement du commentaire:", err);
+            setCommentError("Impossible d'enregistrer le commentaire");
         }
-
-        setCommentError(null);
     };
 
     const handleDeleteComment = async () => {
@@ -151,12 +187,19 @@ function MoviePage() {
 
         if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre commentaire ?')) return;
 
-        // Simuler la suppression d'un commentaire
-        setComments(comments.filter(comment => comment.id !== userComment.id));
-        setUserComment(null);
-        setNewComment('');
-        setRating(5);
-        setCommentError(null);
+        try {
+            await apiClient.delete(`/comment/${userComment.id}`);
+
+            // Mettre à jour l'état local
+            setComments(comments.filter(comment => comment.id !== userComment.id));
+            setUserComment(null);
+            setNewComment('');
+            setRating(5);
+            setCommentError(null);
+        } catch (err) {
+            console.error("Erreur lors de la suppression du commentaire:", err);
+            setCommentError("Impossible de supprimer le commentaire");
+        }
     };
 
     const handleBackToHome = () => {
@@ -259,101 +302,80 @@ function MoviePage() {
                             )}
                         </div>
 
-                        {movie?.genres && movie.genres.length > 0 && (
-                            <div className="movie-genres">
-                                <h3>Genres</h3>
-                                <div className="genres-list">
-                                    {movie.genres.map(genre => (
-                                        <span key={genre.id} className="genre-tag">{genre.name}</span>
-                                    ))}
-                                </div>
+                        {movie?.overview && (
+                            <div className="movie-description">
+                                <h2>Synopsis</h2>
+                                <p>{movie.overview}</p>
                             </div>
                         )}
 
-                        <div className="movie-synopsis">
-                            <h2>Synopsis</h2>
-                            <p>{movie?.overview || 'Aucun synopsis disponible.'}</p>
+                        <div className="movie-comments-section">
+                            <h2>Commentaires</h2>
+
+                            <form className="comment-form" onSubmit={handleSubmitComment}>
+                                <div className="rating-selector">
+                                    <label>Votre note:</label>
+                                    <select
+                                        value={rating}
+                                        onChange={(e) => setRating(Number(e.target.value))}
+                                    >
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                            <option key={num} value={num}>{num}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Votre commentaire..."
+                                    rows={4}
+                                    required
+                                ></textarea>
+
+                                {commentError && <div className="comment-error">{commentError}</div>}
+
+                                <div className="comment-actions">
+                                    <button type="submit" className="submit-comment">
+                                        {userComment ? 'Mettre à jour' : 'Commenter'}
+                                    </button>
+                                    {userComment && (
+                                        <button
+                                            type="button"
+                                            className="delete-comment"
+                                            onClick={handleDeleteComment}
+                                        >
+                                            Supprimer
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+
+                            <div className="comments-list">
+                                {commentsLoading ? (
+                                    <div className="comments-loading">Chargement des commentaires...</div>
+                                ) : comments.length === 0 ? (
+                                    <div className="no-comments">Soyez le premier à commenter ce film</div>
+                                ) : (
+                                    comments.map(comment => (
+                                        <div key={comment.id} className="comment-item">
+                                            <div className="comment-header">
+                                                <span className="comment-author">
+                                                    {comment.user ? `${comment.user.firstname} ${comment.user.lastname}` : 'Utilisateur anonyme'}
+                                                </span>
+                                                <span className="comment-score">
+                                                    Note: {comment.score}/10
+                                                </span>
+                                            </div>
+                                            <div className="comment-content">{comment.content}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* Section des commentaires */}
-            <div className="comments-section">
-                <h2>Commentaires</h2>
-
-                {commentError && <div className="comment-error">{commentError}</div>}
-
-                {/* Formulaire de commentaire */}
-                <div className="comment-form-container">
-                    <h3>{userComment ? 'Modifier votre avis' : 'Donnez votre avis'}</h3>
-                    <form className="comment-form" onSubmit={handleSubmitComment}>
-                        <div className="rating-container">
-                            <label>Votre note:</label>
-                            <div className="rating-input">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(val => (
-                                    <button
-                                        key={val}
-                                        type="button"
-                                        className={`rating-btn ${val <= rating ? 'active' : ''}`}
-                                        onClick={() => setRating(val)}
-                                    >
-                                        {val}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <textarea
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Partagez votre avis sur ce film..."
-                            required
-                        ></textarea>
-
-                        <div className="comment-actions">
-                            <button type="submit" className="btn-submit">
-                                {userComment ? 'Mettre à jour' : 'Publier'}
-                            </button>
-
-                            {userComment && (
-                                <button
-                                    type="button"
-                                    className="btn-delete"
-                                    onClick={handleDeleteComment}
-                                >
-                                    Supprimer
-                                </button>
-                            )}
-                        </div>
-                    </form>
-                </div>
-
-                {/* Liste des commentaires */}
-                <div className="comments-list">
-                    {commentsLoading ? (
-                        <div className="comments-loading">Chargement des commentaires...</div>
-                    ) : Array.isArray(comments) && comments.length === 0 ? (
-                        <div className="no-comments">Aucun commentaire pour ce film</div>
-                    ) : (
-                        Array.isArray(comments) && comments.map(comment => (
-                            <div key={comment.id} className="comment-card">
-                                <div className="comment-header">
-                                    <span className="comment-author">
-                                        {comment.user ? `${comment.user.firstname || ''} ${comment.user.lastname || ''}` : 'Utilisateur inconnu'}
-                                    </span>
-                                    <span className="comment-score">
-                                        Note: <strong>{comment.score}/10</strong>
-                                    </span>
-                                </div>
-                                <div className="comment-content">
-                                    {comment.content}
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
         </div>
     );
 }

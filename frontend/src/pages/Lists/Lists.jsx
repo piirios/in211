@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useMovieContext } from '../../context/MovieContext';
 import './Lists.css';
 
 function Lists() {
@@ -10,55 +10,46 @@ function Lists() {
     const [newListName, setNewListName] = useState('');
     const [editingList, setEditingList] = useState(null);
     const navigate = useNavigate();
+    const { userLists, createList, deleteList, updateListName, refreshLists, loading: contextLoading } = useMovieContext();
 
-    // Utilisation de données mock pour le développement
-    const mockLists = [
-        { id: 1, name: "Films à voir", movies: [{ id: 123, title: "Inception" }, { id: 456, title: "Interstellar" }] },
-        { id: 2, name: "Films favoris", movies: [{ id: 789, title: "The Dark Knight" }] },
-        { id: 3, name: "Films d'action", movies: [] }
-    ];
-
-    // Simuler la récupération des listes
+    // Synchroniser l'état local avec le contexte
     useEffect(() => {
-        // Simulation d'un délai réseau
-        setTimeout(() => {
-            setLists(mockLists);
-            setLoading(false);
-        }, 800);
-    }, []);
+        setLists(userLists);
+        setLoading(contextLoading);
+    }, [userLists, contextLoading]);
 
     // Créer une nouvelle liste
     const handleCreateList = async (e) => {
         e.preventDefault();
         if (!newListName.trim()) return;
 
-        // Simuler la création d'une liste
-        const newListId = lists.length > 0 ? Math.max(...lists.map(list => list.id)) + 1 : 1;
-        const newList = {
-            id: newListId,
-            name: newListName,
-            movies: []
-        };
-
-        setLists([...lists, newList]);
-        setNewListName('');
+        try {
+            await createList(newListName);
+            setNewListName('');
+        } catch (err) {
+            setError("Erreur lors de la création de la liste");
+        }
     };
 
     // Modifier le nom d'une liste
     const handleUpdateList = async (listId, newName) => {
-        // Simuler la mise à jour d'une liste
-        setLists(lists.map(list =>
-            list.id === listId ? { ...list, name: newName } : list
-        ));
-        setEditingList(null);
+        try {
+            await updateListName(listId, newName);
+            setEditingList(null);
+        } catch (err) {
+            setError("Erreur lors de la mise à jour de la liste");
+        }
     };
 
     // Supprimer une liste
     const handleDeleteList = async (listId) => {
         if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette liste ?')) return;
 
-        // Simuler la suppression d'une liste
-        setLists(lists.filter(list => list.id !== listId));
+        try {
+            await deleteList(listId);
+        } catch (err) {
+            setError("Erreur lors de la suppression de la liste");
+        }
     };
 
     // Voir les films d'une liste

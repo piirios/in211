@@ -1,165 +1,170 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import './ListDetail.css';
+import { useMovieContext } from '../../context/MovieContext';
+import axios from 'axios';
+import MovieTable from '../../components/MovieTable/MovieTable';
 
 function ListDetail() {
     const { listId } = useParams();
     const navigate = useNavigate();
+    const { userLists, removeMovie, loading: contextLoading, error: contextError } = useMovieContext();
+
     const [list, setList] = useState(null);
     const [movies, setMovies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Données mock pour le développement
-    const mockLists = {
-        "1": {
-            id: 1,
-            name: "Films à voir",
-            movies: [
-                { id: 123, title: "Inception", poster_path: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg" },
-                { id: 456, title: "Interstellar", poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg" }
-            ]
-        },
-        "2": {
-            id: 2,
-            name: "Films favoris",
-            movies: [
-                { id: 789, title: "The Dark Knight", poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg" }
-            ]
-        },
-        "3": {
-            id: 3,
-            name: "Films d'action",
-            movies: []
-        }
-    };
-
+    // Récupérer les détails de la liste et les films
     useEffect(() => {
-        // Simuler un délai réseau
-        setTimeout(() => {
-            const selectedList = mockLists[listId];
-            if (selectedList) {
-                setList({
-                    id: selectedList.id,
-                    name: selectedList.name
-                });
-                setMovies(selectedList.movies || []);
-                setError(null);
-            } else {
-                setError("Liste introuvable");
-                setMovies([]);
-            }
-            setLoading(false);
-        }, 800);
-    }, [listId]);
+        const fetchListDetails = async () => {
+            if (!listId) return;
 
-    const handleRemoveMovie = (movieId) => {
+            setLoading(true);
+            try {
+                // Configurer axios pour le backend
+                const apiClient = axios.create({
+                    baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Récupérer les films de la liste
+                const response = await apiClient.get(`/movies/list/${listId}`);
+
+                if (response.data && response.data.list) {
+                    setList(response.data.list);
+                    setMovies(response.data.movies || []);
+                    setError(null);
+                } else {
+                    throw new Error("Format de réponse incorrect");
+                }
+            } catch (err) {
+                console.error("Erreur lors du chargement de la liste:", err);
+
+                // Si l'API échoue, essayer de récupérer les données du contexte
+                const listFromContext = userLists.find(l => l.id === parseInt(listId));
+                if (listFromContext) {
+                    setList(listFromContext);
+                    setMovies(listFromContext.movies || []);
+                    setError(null);
+                } else {
+                    setError("Impossible de charger les détails de la liste");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchListDetails();
+    }, [listId, userLists]);
+
+    // Après avoir récupéré les films, enrichir avec TMDB si besoin
+    useEffect(() => {
+        // Si les films existent et n'ont pas de titre, on enrichit
+        if (movies.length > 0 && !movies[0].title) {
+            const fetchDetails = async () => {
+                try {
+                    const enriched = await Promise.all(
+                        movies.map(async (movie) => {
+                            // Si déjà enrichi, on ne refait pas l'appel
+                            if (movie.title && movie.poster_path) return movie;
+                            try {
+                                const response = await fetch(
+                                    `https://api.themoviedb.org/3/movie/${movie.id}?language=fr-FR`,
+                                    {
+                                        headers: {
+                                            'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`,
+                                            'accept': 'application/json'
+                                        }
+                                    }
+                                );
+                                if (!response.ok) throw new Error('Erreur TMDB');
+                                const data = await response.json();
+                                return { ...movie, ...data };
+                            } catch (err) {
+                                return movie; // fallback : on garde l'id
+                            }
+                        })
+                    );
+                    setMovies(enriched);
+                } catch (err) {
+                    // ignore
+                }
+            };
+            fetchDetails();
+        }
+    }, [movies]);
+
+    // Gérer le retrait d'un film de la liste
+    const handleRemoveMovie = async (movieId) => {
         try {
-            // Simuler la suppression d'un film de la liste
-            setMovies(movies.filter(movie => movie.id !== movieId));
-            // Message de confirmation
-            alert("Film retiré de la liste avec succès");
+            await removeMovie(movieId, parseInt(listId));
+            setMovies(prevMovies => prevMovies.filter(movie => movie.id !== movieId));
         } catch (err) {
             console.error("Erreur lors de la suppression du film:", err);
-            alert("Erreur lors de la suppression du film");
+            alert("Impossible de retirer le film de la liste");
         }
     };
 
+    // Naviguer vers la page détaillée d'un film
     const handleViewMovie = (movieId) => {
         navigate(`/movie/${movieId}`);
     };
 
-    const handleBackToLists = () => {
-        navigate('/lists');
+    // Retourner à la page d'accueil
+    const goBack = () => {
+        navigate('/');
     };
 
-    if (loading) {
+    // Afficher un état de chargement
+    if (loading || contextLoading) {
         return (
             <div className="list-detail-container">
-                <div className="loading">
-                    <span>Chargement des détails de la liste...</span>
-                </div>
+                <div className="loading">Chargement...</div>
             </div>
         );
     }
 
-    // Si la liste n'existe pas
-    if (error) {
+    // Afficher un message d'erreur
+    if (error || contextError) {
         return (
             <div className="list-detail-container">
-                <button className="back-button" onClick={handleBackToLists}>
-                    ← Retour aux listes
-                </button>
-                <div className="error-message">{error}</div>
-                <div className="empty-list">
-                    <button onClick={() => navigate('/lists')}>
-                        Voir toutes mes listes
-                    </button>
-                </div>
+                <div className="error-message">{error || contextError}</div>
+                <button onClick={goBack} className="back-button">Retour à l'accueil</button>
+            </div>
+        );
+    }
+
+    // Afficher un message si la liste n'existe pas
+    if (!list) {
+        return (
+            <div className="list-detail-container">
+                <div className="error-message">Liste non trouvée</div>
+                <button onClick={goBack} className="back-button">Retour à l'accueil</button>
             </div>
         );
     }
 
     return (
         <div className="list-detail-container">
-            <button className="back-button" onClick={handleBackToLists}>
-                ← Retour aux listes
-            </button>
+            <div className="list-header">
+                <button onClick={goBack} className="back-button">
+                    ← Retour
+                </button>
+                <h1>{list.name}</h1>
+            </div>
 
-            {list && (
-                <>
-                    <h1 className="list-title">{list.name}</h1>
-
-                    {Array.isArray(movies) && movies.length === 0 ? (
-                        <div className="empty-list">
-                            <p>Cette liste ne contient aucun film</p>
-                            <button onClick={() => navigate('/')}>
-                                Parcourir les films
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="movies-grid">
-                            {Array.isArray(movies) && movies.map(movie => (
-                                <div key={movie.id} className="movie-card">
-                                    <div className="movie-poster-container">
-                                        {movie.poster_path ? (
-                                            <img
-                                                src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                                                alt={movie.title}
-                                                className="movie-poster"
-                                            />
-                                        ) : (
-                                            <div className="no-poster">
-                                                Pas d'affiche
-                                            </div>
-                                        )}
-                                        <div className="movie-overlay">
-                                            <div className="movie-actions">
-                                                <button
-                                                    className="btn-view"
-                                                    onClick={() => handleViewMovie(movie.id)}
-                                                >
-                                                    Voir détails
-                                                </button>
-
-                                                <button
-                                                    className="btn-remove"
-                                                    onClick={() => handleRemoveMovie(movie.id)}
-                                                >
-                                                    Retirer
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <h3 className="movie-title" title={movie.title}>
-                                        {movie.title}
-                                    </h3>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </>
+            {movies.length === 0 ? (
+                <div className="empty-list">
+                    <p>Cette liste ne contient aucun film.</p>
+                    <button onClick={goBack} className="back-to-home">
+                        Retour à l'accueil pour ajouter des films
+                    </button>
+                </div>
+            ) : (
+                <MovieTable MovieList={movies} listId={parseInt(listId)} />
             )}
         </div>
     );

@@ -18,7 +18,7 @@ export const appDataSource = new DataSource({
       process.env.NODE_ENV === 'production'
         ? false
         : {
-            rejectUnauthorized: false,
-          },
+          rejectUnauthorized: false,
+        },
   },
 });
